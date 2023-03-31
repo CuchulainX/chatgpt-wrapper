@@ -1,0 +1,12 @@
+
+
+##########################################################
+# Chat settings.
+##########################################################
+chat:
+  # The model to use when communicating with the server.
+  model: gpt4
+  # When using the OpenAI API backend, the defaults for these values can be
+  # customized. See
+  # https://platform.openai.com/docs/api-reference/chat for more information.
+
