@@ -1,16 +1,34 @@
-from chatgpt_wrapper.plugin import Plugin
-import chatgpt_wrapper.debug as debug
-if False:
-    debug.console(None)
+from chatgpt_wrapper.core.plugin import Plugin
+import chatgpt_wrapper.core.util as util
 
 class Test(Plugin):
 
+    def default_config(self):
+        """
+           The default configuration for this plugin.
+           This is called by the plugin manager after the plugin is initialized.
+           The user can override these settings in their profile configuration,
+           under the key 'plugins.test'.
+        """
+        return {
+            'response': {
+                'prefix': 'Test',
+            },
+        }
+
     def setup(self):
+        """
+        Setup the plugin. This is called by the plugin manager after the backend
+        is initialized.
+        """
         self.log.info(f"This is the test plugin, running with backend: {self.backend.name}")
+        # Accessing the final configuration of the plugin.
+        self.response_prefix = self.config.get('plugins.test.response.prefix')
 
     def get_shell_completions(self, _base_shell_completions):
+        """Example of provided shell completions."""
         commands = {}
-        commands[self.shell.command_with_leader('test')] = self.shell.list_to_completion_hash(['one', 'two', 'three'])
+        commands[util.command_with_leader('test')] = util.list_to_completion_hash(['one', 'two', 'three'])
         return commands
 
     async def do_test(self, arg):
@@ -22,4 +40,4 @@ class Test(Plugin):
         """
         if not arg:
             return False, arg, "Argument is required"
-        return True, arg, f"Test: {arg}"
+        return True, arg, f"{self.response_prefix}: {arg}"

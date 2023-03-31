@@ -8,6 +8,8 @@ What would you like to do?
 * [Install the wrapper](#requirements)
 * [Learn more about configuration/features](#configuration)
 * [Learn how to use it](#usage)
+* [Troubleshoot common issues](#troubleshooting)
+* [Upgrade the wrapper](#upgrading)
 * [Using GPT4](#gpt4)
 * [Report a bug](ISSUES.md)
 * [Get support](SUPPORT.md)
@@ -129,7 +131,7 @@ chatgpt
   * You control your data
 * Cons:
   * Only paid version available (as of this writing)
-  * More commplex setup suitable for technical users
+  * More complex setup suitable for technical users
 
 Grab an API key from [https://platform.openai.com/account/api-keys](https://platform.openai.com/account/api-keys)
 
@@ -268,6 +270,14 @@ All other attributes will be passed to the template as variable substitutions.
    ```
    Note that setting `plugins.enabled` will overwrite the default enabled plugins. see `/config` for a list of default enabled plugins.
 
+### Core plugins:
+
+* **test:** Test plugin, echos back the command you give it
+* **awesome:** Use a prompt from Awesome ChatGPT Prompts: [https://github.com/f/awesome-chatgpt-prompts](https://github.com/f/awesome-chatgpt-prompts)
+* **database:** Send natural language commands to a database **WARNING: POTENTIALLY DANGEROUS -- DATA INTEGRITY CANNOT BE GUARANTEED.**
+* **data_query:** Send natural language commands to a loaded file of structured data
+* **shell:** Transform natural language into a shell command, and optionally execute it **WARNING: POTENTIALLY DANGEROUS -- YOU ARE RESPONSIBLE FOR VALIDATING THE COMMAND RETURNED BY THE LLM, AND THE OUTCOME OF ITS EXECUTION.**
+* **zap:** Send natural language commands to Zapier actions: [https://nla.zapier.com/get-started/](https://nla.zapier.com/get-started/)
 
 ### Writing plugins
 
@@ -304,7 +314,7 @@ To run the CLI in one-shot mode, simply follow the command with the prompt you w
 chatgpt Hello World!
 ```
 
-#### Interacive mode
+#### Interactive mode
 
 To run the CLI in interactive mode, execute it with no additional arguments:
 
@@ -347,7 +357,7 @@ To pass custom configuration to ChatGPT, use the Config class:
 
 ```python
 from chatgpt_wrapper import ChatGPT
-from chatgpt_wrapper.config import Config
+from chatgpt_wrapper.core.config import Config
 
 config = Config()
 config.set('browser.debug', True)
@@ -362,8 +372,9 @@ else:
 ### Flask API (experimental)
 
 - Run `python chatgpt_wrapper/gpt_api.py --port 5000` (default port is 5000) to start the server
-- Test whether it is working using `python -m unittest tests/api_test.py`
-- See an example of interaction with api in `tests/example_api_call.py`
+- Install pytest: `pip install pytest`
+- Test whether it is working using `pytest tests/integration/api_test.py`
+- See an example of interaction with api in `tests/integration/example_api_call.py`
 
 ## Docker (experimental)
 
@@ -379,6 +390,54 @@ Then, visit http://localhost:6901/vnc.html with password `headless` and login Ch
 Then, turn back to terminal and enjoy the chat!
 
 ![chat](https://i.imgur.com/nRlzUzm.png)
+
+## Test suite
+
+The project uses [Pytest](https://docs.pytest.org).
+
+```
+pip install pytest pytest-asyncio
+```
+
+To run all tests:
+
+```
+pytest
+```
+
+## Troubleshooting
+
+### OpenAI system issues
+
+**Oftentimes issues are related to upstream service problems with OpenAI, so please check [https://status.openai.com](https://status.openai.com) before concluding there's an issue with this codebase!**
+
+### Playwright (browser-based) backend issues
+
+It's possible that:
+
+1. Your session has gone stale: Try issuing a `/session` command to refresh it
+2. Your browser session information is corrupted: Try `chatgpt reinstall` and go through the login process again
+3. You're running an outdated version of this project, or one of its dependencies: Completely reinstall the project and its dependencies
+4. You're running into geolocation restrictions in OpenAI's security systems: Try proxying your requests through a VPN server in the US.
+
+## Upgrading:
+
+### Via pip
+
+Until an official release exists, you'll need to uninstall and reinstall:
+
+```sh
+pip uninstall -y chatGPT
+pip install chatGPT
+```
+
+### Via git
+
+If the package was installed via `pip install -e`, simply pull in the latest changes from the repository:
+
+```sh
+git pull
+```
 
 ## GPT4
 
@@ -420,7 +479,7 @@ To use GPT-4 within your Python code, follow the template below:
 
 ```python
 from chatgpt_wrapper import ChatGPT
-from chatgpt_wrapper.config import Config
+from chatgpt_wrapper.core.config import Config
 
 config = Config()
 config.set('chat.model', 'gpt4')
@@ -433,6 +492,8 @@ success, response, message = bot.ask("Hello, world!")
 - [bookast: ChatGPT Podcast Generator For Books](https://github.com/SamMethnani/bookast)
 - [ChatGPT.el: ChatGPT in Emacs](https://github.com/joshcho/ChatGPT.el)
 - [ChatGPT Reddit Bot](https://github.com/PopDaddyGames/ChatGPT-RedditBot)
+- [Smarty GPT](https://github.com/citiususc/Smarty-GPT/tree/v1.1.0)
+- [ChatGPTify](https://github.com/idilsulo/ChatGPTify)
 
 ## Contributing
 

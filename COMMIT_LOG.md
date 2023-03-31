@@ -1,3 +1,78 @@
+### v0.7.2 - 28/03/2023
+
+* **Tue Mar 28 2023:** add support for .jsonl/.xml to data_query plugin
+* **Tue Mar 28 2023:** add config options to shell plugin
+* **Tue Mar 28 2023:** small logic improvements to database/data_query plugins
+* **Tue Mar 28 2023:** extend /config with edit/section args
+* **Mon Mar 27 2023:** add data_query plugin
+* **Mon Mar 27 2023:** more robust filename to class conversion
+* **Mon Mar 27 2023:** snake_to_class() util function
+* **Mon Mar 27 2023:** bump langchain required version
+* **Mon Mar 27 2023:** add database plugin
+* **Mon Mar 27 2023:** add agent:verbose config value to zap plugin
+* **Mon Mar 27 2023:** tighten up prompt template for generating shell commands
+* **Mon Mar 27 2023:** allow plugins/users to access configuration for plugins
+* **Mon Mar 27 2023:** return None on missing value in config.get()
+* **Sun Mar 26 2023:** add unit tests for util functions
+* **Sun Mar 26 2023:** reorg docs
+* **Sun Mar 26 2023:** convert to Pytest framework
+* **Sun Mar 26 2023:** fix SQLAlchemy deprecation warnings
+
+### v0.7.1 - 26/03/2023
+
+* **Sun Mar 26 2023:** per profile playwright sessions for browser backend
+* **Sun Mar 26 2023:** no password for test users
+* **Sun Mar 26 2023:** clean up errant `console` references, fixes #256
+* **Sun Mar 26 2023:** allow custom style for util.print_status_message()
+
+### v0.7.0 - 25/03/2023
+
+#### **:fire_engine:Breaking Changes:fire_engine:**
+
+Lots of file/class/function reorganization:
+
+* Shell usage should be unaffected
+* Basic use cases of Python module should be unaffected
+* More complex use cases of Python module will probably need code adjustments
+
+* **Sat Mar 25 2023:** abstract template functionality, abstract common functions to util module
+* **Sat Mar 25 2023:** user found/not found message helper
+* **Sat Mar 25 2023:** reorg file structure, group modules into core/backends
+
+### v0.6.6 - 24/03/2023
+
+* **Fri Mar 24 2023:** add troubleshooting section to docs
+* **Fri Mar 24 2023:** add 'chatgpt reinstall' one shot command
+* **Thu Mar 23 2023:** add shell plugin
+
+### v0.6.5 - 22/03/2023
+
+* **Wed Mar 22 2023:** inject id into get_conversation() result, add timeout logic for api requests, use for gen_title()
+* **Tue Mar 21 2023:** add comment, ctrl-c interrupt generation not working on windows
+* **Tue Mar 21 2023:** add support for interrupting streaming by ctrl-c
+* **Mon Mar 20 2023:** fix issue writing awesome prompts CSV file
+* **Mon Mar 20 2023:** restore ability of /template-edit to create new templates
+* **Sun Mar 19 2023:** attempt to fix sync wrapper when loop is always running
+* **Sun Mar 19 2023:** add upgrading section to doc
+
+### v0.6.4 - 19/03/2023
+
+* **Sun Mar 19 2023:** add all core plugins to example config
+* **Sun Mar 19 2023:** add init file to plugins dir, fixes #239
+* **Sun Mar 19 2023:** add langchain dependency
+* **Sun Mar 19 2023:** add doc for current core plugins
+* **Sun Mar 19 2023:** add zap plugin
+
+### v0.6.3 - 18/03/2023
+
+* **Sat Mar 18 2023:** clean up template display/workflows
+* **Sat Mar 18 2023:** extract description separate from overrides, fixes #238
+
+### v0.6.2 - 18/03/2023
+
+* **Sat Mar 18 2023:** /templates command improvements
+* **Sat Mar 18 2023:** fix secondary invocations with browser backend, fixes #236
+
 ### v0.6.1 - 17/03/2023
 
 #### **:fire_engine:Breaking Changes:fire_engine:**

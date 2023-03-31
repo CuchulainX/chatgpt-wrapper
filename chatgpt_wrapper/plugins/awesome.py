@@ -3,19 +3,26 @@ import os
 import tempfile
 import urllib.request
 
-import chatgpt_wrapper.constants as constants
-from chatgpt_wrapper.plugin import Plugin
-import chatgpt_wrapper.debug as debug
-if False:
-    debug.console(None)
+import chatgpt_wrapper.core.constants as constants
+import chatgpt_wrapper.core.util as util
+from chatgpt_wrapper.core.plugin import Plugin
 
-PROMPTS_URI = "https://github.com/f/awesome-chatgpt-prompts/raw/main/prompts.csv"
-PROMPTS_TEMP_FILE = "awesome-prompts.csv"
+DEFAULT_PROMPTS_URI = "https://github.com/f/awesome-chatgpt-prompts/raw/main/prompts.csv"
+DEFAULT_PROMPTS_TEMP_FILENAME = "awesome-prompts.csv"
 
 class Awesome(Plugin):
 
+    def default_config(self):
+        return {
+            'prompts': {
+                'uri': DEFAULT_PROMPTS_URI,
+                'temp_filename': DEFAULT_PROMPTS_TEMP_FILENAME,
+            }
+        }
+
     def setup(self):
-        self.prompts_uri = PROMPTS_URI
+        self.prompts_uri = self.config.get('plugins.awesome.prompts.uri')
+        self.prompts_temp_filename = self.config.get('plugins.awesome.prompts.temp_filename')
         self.make_prompts_temp_file()
         self.reset_prompts()
         self.load_prompts()
@@ -23,7 +30,7 @@ class Awesome(Plugin):
     def get_shell_completions(self, _base_shell_completions):
         commands = {}
         help_keys = ['reload'] + list(self.loaded_prompts.keys())
-        commands[self.shell.command_with_leader('awesome')] = self.shell.list_to_completion_hash(help_keys)
+        commands[util.command_with_leader('awesome')] = util.list_to_completion_hash(help_keys)
         return commands
 
     async def do_awesome(self, arg):
@@ -43,7 +50,7 @@ class Awesome(Plugin):
         if not arg:
             return False, arg, "Argument is required"
         elif arg == 'reload':
-            self.shell._print_status_message(True, "Reloading Awesome ChatGPT Prompts")
+            util.print_status_message(True, "Reloading Awesome ChatGPT Prompts")
             self.delete_prompts()
             self.load_prompts()
             return True, None, "Awesome ChatGPT Prompts reloaded"
@@ -59,7 +66,7 @@ class Awesome(Plugin):
         self.loaded_prompts = {}
 
     def make_prompts_temp_file(self):
-        self.prompts_temp_file = os.path.join(tempfile.gettempdir(), PROMPTS_TEMP_FILE)
+        self.prompts_temp_file = os.path.join(tempfile.gettempdir(), self.prompts_temp_filename)
         self.log.debug(f"Created prompts temp file: {self.prompts_temp_file}")
 
     def list_prompts(self):
@@ -79,8 +86,8 @@ class Awesome(Plugin):
             self.log.error(f"Error downloading prompts file: {e}")
             return
         try:
-            with open(self.prompts_temp_file, 'wb') as out_file:
-                out_file.write(data)
+            with open(self.prompts_temp_file, 'w', encoding='utf-8') as out_file:
+                out_file.write(data.decode('utf-8'))
             self.prompts_downloaded = True
         except Exception as e:
             self.log.error(f"Error writing prompts file: {e}")
@@ -88,7 +95,7 @@ class Awesome(Plugin):
     def load_prompts(self):
         self.get_prompts()
         if not self.loaded_prompts:
-            with open(self.prompts_temp_file) as f:
+            with open(self.prompts_temp_file, encoding='utf-8') as f:
                 self.log.info(f"Loading prompts from {self.prompts_temp_file}")
                 reader = csv.DictReader(f)
                 for row in reader:
