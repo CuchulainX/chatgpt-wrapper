@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from chatgpt_wrapper import ChatGPT
+from chatgpt_wrapper.backends.browser.chatgpt import ChatGPT
 from chatgpt_wrapper.core.config import Config
 
 def test_sync_chatgpt():
@@ -10,6 +10,7 @@ def test_sync_chatgpt():
         config.set('browser.debug', True)
     config.set('debug.log.enabled', True)
     gpt = ChatGPT(config)
+    gpt.launch_browser()
     response1 = gpt.ask("Say, bot1!")
     print(response1)
     assert response1

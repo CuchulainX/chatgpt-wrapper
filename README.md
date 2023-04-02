@@ -18,13 +18,13 @@ What would you like to do?
 
 ## Highlights
 
-🤖 **Programmable ChatGPT**. The ChatGPT Wrapper lets you use the powerful ChatGPT/GPT4 bot in your _Python scripts_ or on the _command line_, making it easy to leverage its functionality into your projects.
+🤖 The ChatGPT Wrapper lets you use the powerful ChatGPT/GPT4 bot from the _command line.
 
 💬 **Runs in Shell**. You can call and interact with ChatGPT/GPT4 in the terminal.
 
 💻  **Supports official ChatGPT API**. Make API calls directly to the OpenAI ChatGPT endpoint (all supported models accessible by your OpenAI account)
 
-🐍 **Python API**. The ChatGPT Wrapper is a Python library that lets you use ChatGPT/GPT4 in your Python scripts.
+🐍 **Python API**. The ChatGPT Wrapper also has a Python library that lets you use ChatGPT/GPT4 in your Python scripts.
 
 🔌 **Simple plugin architecture**. Extend the wrapper with custom functionality (alpha)
 
@@ -48,19 +48,9 @@ See below for details on using ChatGPT as an API from Python.
 
 To use this repository, you need `setuptools` installed. You can install it using `pip install setuptools`. Make sure that you have the last version of pip: `pip install --upgrade pip`
 
-To use the 'chatgpt-api' backend, you need a database backend (SQLite by default, any configurable in SQLAlchemy allowed).
+To use the 'chatgpt-api' backend (the default), you need a database backend (SQLite by default, any configurable in SQLAlchemy allowed).
 
 ## Installation
-
-### Notes for Windows users
-
-Most other operating systems come with SQLite (the default database choice) installed, Windows may not.
-
-If not, you can grab the 32-bit or 64-bit DLL file from [https://www.sqlite.org/download.html](https://www.sqlite.org/download.html), then place the DLL in `C:\Windows\System32` directory.
-
-You also may need to install Python, if so grab the latest stable package from [https://www.python.org/downloads/windows/](https://www.python.org/downloads/windows/) -- make sure to select the install option to `Add Python to PATH`.
-
-For the `/editor` command to work, you'll need a command line editor installed and in your path. You can control which editor is used by setting the `EDITOR` environment variable to the name of the editor executable, e.g. `nano` or `vim`.
 
 ### Code
 
@@ -87,42 +77,7 @@ pip install git+https://github.com/mmabrouk/chatgpt-wrapper
 
 The wrapper works with several differnt backends to connect to the ChatGPT models, and installation is different for each backend.
 
-#### Playwright (browser-based)
-
-* Pros:
-  * Free or paid version available (as of this writing)
-  * Fairly easy to set up for non-technical users
-* Cons:
-  * Slow (runs a full browser session)
-  * Clunky authentication method
-  * No model customizations
-  * Third party controls your data
-
-Install a browser in playwright (if you haven't already). The program will use firefox by default.
-
-```
-playwright install firefox
-```
-
-Start up the program in `install` mode:
-
-```bash
-chatgpt install
-```
-
-This opens up a browser window. Log in to ChatGPT in the browser window, walk through all the intro screens, then exit program.
-
-```bash
-1> /exit
-```
-
-Restart the program without the `install` parameter to begin using it.
-
-```bash
-chatgpt
-```
-
-#### API (REST-based)
+#### API (REST-based): **DEFAULT**
 
 * Pros:
   * Fast (many operations run locally for speed)
@@ -143,29 +98,7 @@ export OPENAI_API_KEY=<API_KEY>
 
 Windows users, see [here](https://www.computerhope.com/issues/ch000549.htm) for how to edit environment variables.
 
-Run the program with the 'config' command:
-
-```bash
-chatgpt config
-```
-
-This will show all the current configuration settings, the most important ones for installation are:
-
-* **Config dir:** Where configuration files are stored
-* **Current profile:** (shown in the 'Profile configuration' section)
-* **Config file:** The configuration file current being used
-* **Data dir:** The data storage directory
-
-Find the 'Config file' setting, and copy the [config.sample.yaml](/config.sample.yaml) there:
-
-On Linux:
-
- ```bash
-mkdir -p ~/.config/chatgpt-wrapper/profiles/default
-cp config.sample.yaml ~/.config/chatgpt-wrapper/profiles/default/config.yaml
-```
-
-Then edit the settings in that file to taste.  You'll want to make sure `backend` is set to `chatgpt-api` in order to use the API.
+To tweak the configuration for the current profile, see [Configuration](#configuration)
 
 ##### Database configuration
 
@@ -201,23 +134,97 @@ Once you're logged in, you have full access to all commands.
 
 **IMPORTANT NOTE:** The user authorization system from the command line is 'admin party' -- meaning every logged in user has admin privileges, including editing and deleting other users.
 
+#### Playwright (browser-based): **DEPRECATED**
+
+This backend is deprecated, and may be removed in a future release.
+
+Support will not be provided for using the `ChatGPT` class of this backend directly.
+
+* Pros:
+  * Free or paid version available (as of this writing)
+  * Fairly easy to set up for non-technical users
+* Cons:
+  * Slow (runs a full browser session)
+  * Clunky authentication method
+  * No model customizations
+  * Third party controls your data
+
+In your profile configuration file, you'll want to make sure the backend is set to the following in order to use the browser backend:
+
+```yaml
+backend: 'chatgpt-browser'
+```
+
+To tweak the configuration for the current profile, see [Configuration](#configuration)
+
+Install a browser in playwright (if you haven't already). The program will use firefox by default.
+
+```
+playwright install firefox
+```
+
+Start up the program in `install` mode:
+
+```bash
+chatgpt install
+```
+
+This opens up a browser window. Log in to ChatGPT in the browser window, walk through all the intro screens, then exit program.
+
+```bash
+1> /exit
+```
+
+Restart the program without the `install` parameter to begin using it.
+
+```bash
+chatgpt
+```
+
+### Notes for Windows users
+
+Most other operating systems come with SQLite (the default database choice) installed, Windows may not.
+
+If not, you can grab the 32-bit or 64-bit DLL file from [https://www.sqlite.org/download.html](https://www.sqlite.org/download.html), then place the DLL in `C:\Windows\System32` directory.
+
+You also may need to install Python, if so grab the latest stable package from [https://www.python.org/downloads/windows/](https://www.python.org/downloads/windows/) -- make sure to select the install option to `Add Python to PATH`.
+
+For the `/editor` command to work, you'll need a command line editor installed and in your path. You can control which editor is used by setting the `EDITOR` environment variable to the name of the editor executable, e.g. `nano` or `vim`.
 
 ## Configuration
 
-From a running `chatgpt` instance, execute `/config` to view the current configuration.
+Run the program with the 'config' command:
 
-The output will show the location of the configuration directory, the name of
-the configuration file (called a 'profile'), and the current configuration.
+```bash
+chatgpt config
+```
+
+This will show all the current configuration settings, the most important ones for installation are:
+
+* **Config dir:** Where configuration files are stored
+* **Current profile:** (shown in the 'Profile configuration' section)
+* **Config file:** The configuration file current being used
+* **Data dir:** The data storage directory
+
+From a running `chatgpt` instance, execute `/config` to view the current configuration.
 
 Configuration is optional, default values will be used if no configuration profile is
 provided. The default configuation settings can be seen in
 [config.sample.yaml](/config.sample.yaml) -- the file is commented with descriptions 
-of the settings.
+of the settings -- DON'T just copy this file as your configuration! Instead, use it as
+a reference to tweak the configuration to your liking.
 
 *NOTE:* Not all settings are available on all backends. See the example config for more information.
 
 Command line arguments overrride custom configuration settings, which override default
 configuration settings.
+
+### Editing the configuration for the current profile
+
+1. Start the program: `chatgpt`
+2. Open the profile's configuration file in an editor: `/config edit`
+3. Edit file to taste and save
+4. Restart the program
 
 ## Templates (alpha, subject to change)
 
@@ -336,12 +343,16 @@ Once the interactive shell is running, you can see a list of all commands with:
 
 ### Python
 
-To use the `ChatGPT` class as an API for talking to ChatGPT, create an instance of the class and use the `ask` method to send a message to OpenAI and receive the response. For example:
+**IMPORTANT:** Use of browser backend's `ChatGPT` class has been deprectated, no support will be provided for this usage.
+
+You can  use the API backend's `OpenAIAPI` class to interact directly with the chat LLM.
+
+Create an instance of the class and use the `ask` method to send a message to OpenAI and receive the response. For example:
 
 ```python
-from chatgpt_wrapper import ChatGPT
+from chatgpt_wrapper import OpenAIAPI
 
-bot = ChatGPT()
+bot = OpenAIAPI()
 success, response, message = bot.ask("Hello, world!")
 if success:
     print(response)
@@ -349,19 +360,19 @@ else:
     raise RuntimeError(message)
 ```
 
-The say method takes a string argument representing the message to send to ChatGPT, and returns a string representing the response received from ChatGPT.
+The ask method takes a string argument representing the message to send to the API, and returns a string representing the response received.
 
-You may also stream the response as it comes in from ChatGPT in chunks using the `ask_stream` generator.
+You may also stream the response as it comes in from the API in chunks using the `ask_stream` generator.
 
 To pass custom configuration to ChatGPT, use the Config class:
 
 ```python
-from chatgpt_wrapper import ChatGPT
+from chatgpt_wrapper import OpenAIAPI
 from chatgpt_wrapper.core.config import Config
 
 config = Config()
 config.set('browser.debug', True)
-bot = ChatGPT(config)
+bot = OpenAIAPI(config)
 success, response, message = bot.ask("Hello, world!")
 if success:
     print(response)
@@ -382,21 +393,19 @@ Build a image for testing `chatgpt-wrapper` with following commands.
 
 ```bash
 docker-compose build && docker-compose up -d
-docker exec -it chatgpt-wrapper-container /bin/bash -c "chatgpt install"
+docker exec -it chatgpt-wrapper-container /bin/bash -c "chatgpt"
 ```
 
-Then, visit http://localhost:6901/vnc.html with password `headless` and login ChatGPT.
+Follow the instructions to create the first user.
 
-Then, turn back to terminal and enjoy the chat!
-
-![chat](https://i.imgur.com/nRlzUzm.png)
+Enjoy the chat!
 
 ## Test suite
 
 The project uses [Pytest](https://docs.pytest.org).
 
 ```
-pip install pytest pytest-asyncio
+pip install pytest
 ```
 
 To run all tests:
@@ -443,13 +452,13 @@ git pull
 
 ### Backend notes
 
-#### Playwright (browser-based) backend
-
-To use GPT-4 with this backend, you must have a ChatGPT-Plus subscription.
-
 #### API backend
 
 To use GPT-4 with this backend, you must have been granted access to the model in your OpenAI account.
+
+#### Playwright (browser-based) backend: **DEPRECATED**
+
+To use GPT-4 with this backend, you must have a ChatGPT-Plus subscription.
 
 ### Using GPT-4
 
@@ -478,12 +487,12 @@ model: gpt4
 To use GPT-4 within your Python code, follow the template below:
 
 ```python
-from chatgpt_wrapper import ChatGPT
+from chatgpt_wrapper import OpenAIAPI
 from chatgpt_wrapper.core.config import Config
 
 config = Config()
 config.set('chat.model', 'gpt4')
-bot = ChatGPT(config)
+bot = OpenAIAPI(config)
 success, response, message = bot.ask("Hello, world!")
 ```
 
@@ -494,6 +503,7 @@ success, response, message = bot.ask("Hello, world!")
 - [ChatGPT Reddit Bot](https://github.com/PopDaddyGames/ChatGPT-RedditBot)
 - [Smarty GPT](https://github.com/citiususc/Smarty-GPT/tree/v1.1.0)
 - [ChatGPTify](https://github.com/idilsulo/ChatGPTify)
+- [selection-to-chatgpt](https://github.com/collin-murphy/selection-to-chatgpt)
 
 ## Contributing
 
