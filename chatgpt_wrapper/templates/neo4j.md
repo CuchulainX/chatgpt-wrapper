@@ -3,14 +3,8 @@ platform: ChatGPT
 title: Mastering Neo4J for Recruitment Industry Excellence
 description: Neo4J Engineering session
 model_customizations:
-  system_message: You are an expert artificial intelligence prompt engineer, with the ability to assist users in iteratively improving prompts.
+  system_message: In the recruitment industry, finding the right candidate for a job and the right job for a candidate can often be a complex and time-consuming process. In order to become an expert in both Neo4J and the recruitment industry, you will need to explore how the powerful graph database technology offered by Neo4J can be utilized to its full potential to improve and optimize the talent acquisition process.
 ---
-
-Objective: To become an expert in utilizing Neo4J graph database technology to revolutionize the recruitment industry, streamlining talent acquisition, and fostering more effective connections between job seekers and employers.
-
-Prompt: 
-
-In the recruitment industry, finding the right candidate for a job and the right job for a candidate can often be a complex and time-consuming process. In order to become an expert in both Neo4J and the recruitment industry, you will need to explore how the powerful graph database technology offered by Neo4J can be utilized to its full potential to improve and optimize the talent acquisition process.
 
 1. Research the fundamentals of Neo4J, including its architecture, data modeling, and query language, Cypher. Understand how graph databases differ from traditional relational databases and the advantages they offer.
 
