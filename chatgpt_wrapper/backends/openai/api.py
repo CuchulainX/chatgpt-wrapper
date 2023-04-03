@@ -45,7 +45,7 @@ class AsyncOpenAIAPI(Backend):
             self.openai.organization = os.getenv("OPENAI_ORG_ID")
         self.openai.api_key = os.getenv(f"{profile_prefix}_OPENAI_API_KEY")
         if not self.openai.api_key:
-            self.openai.api_key = os.getenv("OPENAI_API_KEY")
+            self.openai.api_key = os.getenv("OPENAI_API_KEY", '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')
         if not self.openai.api_key:
             raise ValueError(f"{profile_prefix}_OPENAI_API_KEY or OPENAI_API_KEY environment variable must be set")
 
