@@ -5,6 +5,8 @@ import tiktoken
 
 from openai.error import OpenAIError
 
+from langchain.chat_models.openai import ChatOpenAI, _convert_dict_to_message
+
 from chatgpt_wrapper.core.backend import Backend
 import chatgpt_wrapper.core.constants as constants
 import chatgpt_wrapper.core.util as util
@@ -21,6 +23,7 @@ class OpenAIAPI(Backend):
         self.message = MessageManager(self.config)
         self.current_user = None
         self.conversation_tokens = 0
+        self.set_llm_class(ChatOpenAI)
         self.set_model_system_message()
         self.set_model_temperature(self.config.get('chat.model_customizations.temperature'))
         self.set_model_top_p(self.config.get('chat.model_customizations.top_p'))
@@ -29,10 +32,9 @@ class OpenAIAPI(Backend):
         self.set_model_max_submission_tokens(self.config.get('chat.model_customizations.max_submission_tokens'))
         if default_user_id is not None:
             success, user, user_message = self.user_manager.get_by_user_id(default_user_id)
-            if success:
-                self.set_current_user(user)
-            else:
+            if not success:
                 raise Exception(user_message)
+            self.set_current_user(user)
 
     def _configure_access_info(self):
         self.openai = openai
@@ -62,7 +64,7 @@ class OpenAIAPI(Backend):
             raise Exception(f"Unable to get token encoding for model {model}: {str(e)}")
         return encoding
 
-    def num_tokens_from_messages(self, messages, encoding=None):
+    def get_num_tokens_from_messages(self, messages, encoding=None):
         if not encoding:
             encoding = self.get_token_encoding()
         """Returns the number of tokens used by a list of messages."""
@@ -78,16 +80,16 @@ class OpenAIAPI(Backend):
 
     def switch_to_conversation(self, conversation_id, parent_message_id):
         super().switch_to_conversation(conversation_id, parent_message_id)
-        tokens = self.conversation_token_count(conversation_id)
+        tokens = self.get_conversation_token_count(conversation_id)
         self.conversation_tokens = tokens
 
-    def conversation_token_count(self, conversation_id=None):
+    def get_conversation_token_count(self, conversation_id=None):
         conversation_id = conversation_id or self.conversation_id
         success, old_messages, user_message = self.message.get_messages(conversation_id)
         if not success:
             raise Exception(user_message)
         token_messages = self.prepare_prompt_messsage_context(old_messages)
-        tokens = self.num_tokens_from_messages(token_messages)
+        tokens = self.get_num_tokens_from_messages(token_messages)
         return tokens
 
     def extract_system_message(self, model_customizations):
@@ -100,9 +102,8 @@ class OpenAIAPI(Backend):
                 system_message = aliases[system_message]
         return system_message, model_customizations
 
-    def _extract_completion_content(self, completion):
-        content = "".join([c.message.content for c in completion.choices])
-        return content
+    def _extract_message_content(self, message):
+        return message.content
 
     def gen_title_thread(self, conversation):
         self.log.info(f"Generating title for conversation {conversation.id}")
@@ -118,7 +119,7 @@ class OpenAIAPI(Backend):
             ]
             success, completion, user_message = self._call_openai_non_streaming(new_messages, temperature=0)
             if success:
-                title = self._extract_completion_content(completion)
+                title = self._extract_message_content(completion)
                 self.log.info(f"Title generated for conversation {conversation.id}: {title}")
                 success, conversation, user_message = self.conversation.edit_conversation_title(conversation.id, title)
                 if success:
@@ -217,20 +218,18 @@ class OpenAIAPI(Backend):
             if not success:
                 raise Exception(user_message)
         success, last_message, user_message = self.message.add_message(conversation.id, 'assistant', response_message)
-        if success:
-            tokens = self.conversation_token_count()
-            self.conversation_tokens = tokens
-        else:
+        if not success:
             raise Exception(user_message)
+        tokens = self.get_conversation_token_count()
+        self.conversation_tokens = tokens
         return conversation, last_message
 
     def add_message(self, role, message, conversation_id=None):
         conversation_id = conversation_id or self.conversation_id
         success, message, user_message = self.message.add_message(conversation_id, role, message)
-        if success:
-            return message
-        else:
+        if not success:
             raise Exception(user_message)
+        return message
 
     def _build_openai_chat_request(self, messages, temperature=None, top_p=None, presence_penalty=None, frequency_penalty=None, stream=False):
         temperature = self.model_temperature if temperature is None else temperature
@@ -238,31 +237,36 @@ class OpenAIAPI(Backend):
         presence_penalty = self.model_presence_penalty if presence_penalty is None else presence_penalty
         frequency_penalty = self.model_frequency_penalty if frequency_penalty is None else frequency_penalty
         self.log.debug(f"ChatCompletion.create with message count: {len(messages)}, model: {self.model}, temperature: {temperature}, top_p: {top_p}, presence_penalty: {presence_penalty}, frequency_penalty: {frequency_penalty}, stream: {stream})")
-        try:
-            response = openai.ChatCompletion.create(
-                model=self.model,
-                messages=messages,
-                temperature=temperature,
-                top_p=top_p,
-                presence_penalty=presence_penalty,
-                frequency_penalty=frequency_penalty,
-                stream=stream,
-            )
-        except OpenAIError as e:
-            self.log.error(f"OpenAIError: {e}")
-            raise OpenAIError(e)
-        return response
+        args = {
+            'model_name': self.model,
+            'temperature': temperature,
+            'top_p': top_p,
+            'presence_penalty': presence_penalty,
+            'frequency_penalty': frequency_penalty,
+        }
+        if stream:
+            args.update(self.streaming_args(interrupt_handler=True))
+        llm = self.make_llm(args)
+        messages = [_convert_dict_to_message(m) for m in messages]
+        return llm, messages
 
     def _call_openai_streaming(self, messages, temperature=None, top_p=None, presence_penalty=None, frequency_penalty=None):
         self.log.debug(f"Initiated streaming request with message count: {len(messages)}")
-        response = self._build_openai_chat_request(messages, temperature=temperature, top_p=top_p, presence_penalty=presence_penalty, frequency_penalty=frequency_penalty, stream=True)
-        for chunk in response:
-            yield chunk
+        llm, messages = self._build_openai_chat_request(messages, temperature=temperature, top_p=top_p, presence_penalty=presence_penalty, frequency_penalty=frequency_penalty, stream=True)
+        try:
+            response = llm(messages)
+        except ValueError as e:
+            return False, messages, e
+        return True, response, "Response received"
 
     def _call_openai_non_streaming(self, messages, temperature=None, top_p=None, presence_penalty=None, frequency_penalty=None):
         self.log.debug(f"Initiated non-streaming request with message count: {len(messages)}")
-        completion = self._build_openai_chat_request(messages, temperature=temperature, top_p=top_p, presence_penalty=presence_penalty, frequency_penalty=frequency_penalty)
-        return True, completion, "Retrieved response"
+        llm, messages = self._build_openai_chat_request(messages, temperature=temperature, top_p=top_p, presence_penalty=presence_penalty, frequency_penalty=frequency_penalty)
+        try:
+            response = llm(messages)
+        except ValueError as e:
+            return False, messages, e
+        return True, response, "Response received"
 
     def set_current_user(self, user=None):
         self.current_user = user
@@ -313,10 +317,10 @@ class OpenAIAPI(Backend):
         stripped_messages_count = 0
         while token_count > max_tokens and len(messages) > 1:
             message = messages.pop(0)
-            token_count = self.num_tokens_from_messages(messages)
+            token_count = self.get_num_tokens_from_messages(messages)
             self.log.debug(f"Stripping message: {message['role']}, {message['content']} -- new token count: {token_count}")
             stripped_messages_count += 1
-        token_count = self.num_tokens_from_messages(messages)
+        token_count = self.get_num_tokens_from_messages(messages)
         if token_count > max_tokens:
             raise Exception(f"No messages to send, all messages have been stripped, still over max submission tokens: {max_tokens}")
         if stripped_messages_count > 0:
@@ -328,7 +332,7 @@ class OpenAIAPI(Backend):
     def _prepare_ask_request(self, prompt, system_message=None):
         old_messages, new_messages = self.prepare_prompt_conversation_messages(prompt, self.conversation_id, self.parent_message_id, system_message=system_message)
         messages = self.prepare_prompt_messsage_context(old_messages, new_messages)
-        tokens = self.num_tokens_from_messages(messages)
+        tokens = self.get_num_tokens_from_messages(messages)
         self.conversation_tokens = tokens
         messages = self._strip_out_messages_over_max_tokens(messages, self.conversation_tokens, self.model_max_submission_tokens)
         return new_messages, messages
@@ -351,31 +355,25 @@ class OpenAIAPI(Backend):
     def ask_stream(self, prompt, title=None, model_customizations={}):
         system_message, model_customizations = self.extract_system_message(model_customizations)
         new_messages, messages = self._prepare_ask_request(prompt, system_message=system_message)
-        response_message = ""
         # Streaming loop.
         self.streaming = True
-        for response in self._call_openai_streaming(messages, **model_customizations):
+        #    if not self.streaming:
+        #        self.log.info("Request to interrupt streaming")
+        #        break
+        self.log.debug(f"Started streaming response at {util.current_datetime().isoformat()}")
+        success, response_obj, user_message = self._call_openai_streaming(messages, **model_customizations)
+        if success:
+            self.log.debug(f"Stopped streaming response at {util.current_datetime().isoformat()}")
+            response_message = self._extract_message_content(response_obj)
+            self.message_clipboard = response_message
             if not self.streaming:
-                self.log.info("Request to interrupt streaming")
-                break
-            if 'choices' in response:
-                for choice in response['choices']:
-                    delta = choice['delta']
-                    if 'role' in delta and delta['role'] == 'assistant':
-                        self.log.debug(f"Started streaming response at {response['created']}")
-                    elif len(delta) == 0:
-                        self.log.debug(f"Stopped streaming response at {response['created']}, cause: {response['choices'][0]['finish_reason']}")
-                    elif 'content' in delta:
-                        response_message += delta['content']
-                        self.message_clipboard = response_message
-                        yield delta['content']
-        if not self.streaming:
-            yield (
-                "\nGeneration stopped\n"
-            )
+                util.print_status_message(False, "Generation stopped")
+            success, response_obj, user_message = self._ask_request_post(self.conversation_id, new_messages, response_message, title)
+            if success:
+                response_obj = response_message
         # End streaming loop.
         self.streaming = False
-        self._ask_request_post(self.conversation_id, new_messages, response_message, title)
+        return self._handle_response(success, response_obj, user_message)
 
     def ask(self, prompt, title=None, model_customizations={}):
         """
@@ -389,12 +387,12 @@ class OpenAIAPI(Backend):
         """
         system_message, model_customizations = self.extract_system_message(model_customizations)
         new_messages, messages = self._prepare_ask_request(prompt, system_message=system_message)
-        success, completion, message = self._call_openai_non_streaming(messages, **model_customizations)
+        success, response, user_message = self._call_openai_non_streaming(messages, **model_customizations)
         if success:
-            response_message = self._extract_completion_content(completion)
+            response_message = self._extract_message_content(response)
             self.message_clipboard = response_message
-            success, conversation, message = self._ask_request_post(self.conversation_id, new_messages, response_message, title)
+            success, conversation, user_message = self._ask_request_post(self.conversation_id, new_messages, response_message, title)
             if success:
-                return self._handle_response(success, response_message, message)
-            return self._handle_response(success, conversation, message)
-        return self._handle_response(success, completion, message)
+                return self._handle_response(success, response_message, user_message)
+            return self._handle_response(success, conversation, user_message)
+        return self._handle_response(success, response, user_message)

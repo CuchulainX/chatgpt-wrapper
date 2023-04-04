@@ -57,7 +57,7 @@ class Repl():
         self.config = config or Config()
         self.log = Logger(self.__class__.__name__, self.config)
         self.template_manager = TemplateManager(self.config)
-        self.history = self.get_history()
+        self.history = self.get_shell_history()
         self.style = self.get_styles()
         self.prompt_session = PromptSession(
             history=self.history,
@@ -134,8 +134,10 @@ class Repl():
         completions = self.get_plugin_shell_completions(completions)
         self.command_completer = NestedCompleter.from_nested_dict(completions)
 
-    def get_history(self):
-        return FileHistory(constants.COMMAND_HISTORY_FILE)
+    def get_shell_history(self):
+        history_file = self.config.get('shell.history_file')
+        if history_file:
+            return FileHistory(history_file)
 
     def get_styles(self):
         style = Style.from_dict({
@@ -242,8 +244,13 @@ class Repl():
             )
             self.logfile.flush()
 
-    def set_user_prompt(self):
-        pass
+    def build_shell_user_prefix(self):
+        return ''
+
+    def set_user_prompt(self, user=None):
+        prefix = self.build_shell_user_prefix()
+        self._set_prompt_prefix(prefix)
+        self._set_prompt()
 
     def configure_plugins(self):
         self.plugin_manager = PluginManager(self.config, self.backend)
@@ -676,23 +683,18 @@ class Repl():
             return
 
         if self.stream:
-            response = ""
-            first = True
-            for chunk in self.backend.ask_stream(line, title=title, model_customizations=model_customizations):
-                if first:
-                    print("")
-                    first = False
-                print(chunk, end="")
-                sys.stdout.flush()
-                response += chunk
+            print("")
+            success, response, user_message = self.backend.ask_stream(line, title=title, model_customizations=model_customizations)
             print("\n")
+            if not success:
+                return success, response, user_message
         else:
-            success, response, message = self.backend.ask(line, title=title, model_customizations=model_customizations)
+            success, response, user_message = self.backend.ask(line, title=title, model_customizations=model_customizations)
             if success:
                 print("")
                 util.print_markdown(response)
             else:
-                return success, response, message
+                return success, response, user_message
 
         self._write_log(line, response)
         self._update_message_map()
@@ -1147,30 +1149,36 @@ class Repl():
         util.print_markdown("### %s" % self.intro)
         while True:
             self.set_user_prompt()
-            try:
-                # This extra threading and queuing dance is necessary because
-                # the browser backend starts an event loop, and prompt_tookit
-                # barfs when it tries to start the application when an event
-                # loop is already running.
-                # Converting to prompt_async doesn't seem to help, because
-                # then Playwright complains that it needs to be run in an async
-                # context as well.
-                # Happy to accept a better solution to this promblem if it's
-                # presented.
-                user_input_queue = queue.Queue()
-                def prompt_session():
+            # This extra threading and queuing dance is necessary because
+            # the browser backend starts an event loop, and prompt_tookit
+            # barfs when it tries to start the application when an event
+            # loop is already running.
+            # Converting to prompt_async doesn't seem to help, because
+            # then Playwright complains that it needs to be run in an async
+            # context as well.
+            # Happy to accept a better solution to this promblem if it's
+            # presented.
+            user_input_queue = queue.Queue()
+            def prompt_session():
+                user_input = None
+                try:
                     user_input = self.prompt_session.prompt(
                         self.prompt,
                         completer=self.command_completer,
                     )
+                except KeyboardInterrupt:
+                    user_input_queue.put(KeyboardInterrupt)
+                except EOFError:
+                    user_input_queue.put(EOFError)
+                if user_input is not None:
                     user_input_queue.put(user_input)
-                t = threading.Thread(target=prompt_session)
-                t.start()
-                user_input = user_input_queue.get()
-            except KeyboardInterrupt:
-                continue  # Control-C pressed. Try again.
-            except EOFError:
-                break  # Control-D pressed.
+            t = threading.Thread(target=prompt_session)
+            t.start()
+            user_input = user_input_queue.get()
+            if user_input is KeyboardInterrupt:
+                continue
+            elif user_input is EOFError:
+                break
             try:
                 command, argument = util.parse_shell_input(user_input)
             except (NoInputError, LegacyCommandLeaderError):

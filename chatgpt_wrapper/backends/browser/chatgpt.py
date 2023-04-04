@@ -7,14 +7,72 @@ import datetime
 import uuid
 import re
 import shutil
-from typing import Optional
+from typing import Optional, List
 from playwright.sync_api import sync_playwright
 from playwright._impl._api_structures import ProxySettings
 
+from pydantic_computed import Computed, computed
+from langchain.chat_models.base import BaseChatModel
+from langchain.schema import (
+    BaseMessage,
+    ChatGeneration,
+    ChatResult,
+)
+from langchain.chat_models.openai import _convert_dict_to_message
+
 from chatgpt_wrapper.core.backend import Backend
+from chatgpt_wrapper.core import util
 import chatgpt_wrapper.core.constants as constants
 
 GEN_TITLE_TIMEOUT = 5000
+
+def make_llm_class(klass):
+    class ChatGPTLLM(BaseChatModel):
+        streaming: bool = False
+        model_name: str = "gpt-3.5-turbo"
+        temperature: float = 0.7
+        verbose: bool = False
+        chatgpt: Computed[ChatGPT]
+
+        @computed('chatgpt')
+        def set_chatgpt(**kwargs):
+            return klass
+
+        def __init__(self, **kwargs):
+            super().__init__(**kwargs)
+            model_name = kwargs.get("model_name")
+            if model_name:
+                self.model_name = model_name
+
+        def _agenerate(self):
+            pass
+
+        def _generate(
+            self, messages: any, stop: Optional[List[str]] = None
+        ) -> ChatResult:
+            prompts = []
+            if isinstance(messages, str):
+                messages = [messages]
+            for message in messages:
+                content = message.content if isinstance(message, BaseMessage) else message
+                prompts.append(content)
+            inner_completion = ""
+            role = "assistant"
+            for token in self.chatgpt._ask_stream("\n\n".join(prompts)):
+                inner_completion += token
+                if self.streaming:
+                    self.callback_manager.on_llm_new_token(
+                        token,
+                        verbose=self.verbose,
+                    )
+            message = _convert_dict_to_message(
+                {"content": inner_completion, "role": role}
+            )
+            generation = ChatGeneration(message=message)
+            llm_output = {"model_name": self.model_name}
+            return ChatResult(generations=[generation], llm_output=llm_output)
+
+    return ChatGPTLLM
 
 class ChatGPT(Backend):
     """
@@ -35,16 +93,15 @@ class ChatGPT(Backend):
         self.page = None
         self.browser = None
         self.session = None
+        self.set_llm_class(make_llm_class(self))
         self.new_conversation()
+
 
     def get_primary_profile_directory(self):
         primary_profile = os.path.join(self.config.data_profile_dir, "playwright")
         return primary_profile
 
-    def launch_browser(self, timeout=60, proxy: Optional[ProxySettings] = None):
-        primary_profile = self.get_primary_profile_directory()
-        self.streaming = False
-        self.play = sync_playwright().start()
+    def launch_browser_context(self, user_data_dir):
         browser = self.config.get('browser.provider')
         headless = not self.config.get('browser.debug')
         try:
@@ -52,23 +109,27 @@ class ChatGPT(Backend):
         except Exception:
             print(f"Browser {browser} is invalid, falling back on firefox")
             playbrowser = self.play.firefox
+        self.browser = playbrowser.launch_persistent_context(
+            user_data_dir=user_data_dir,
+            headless=headless,
+            proxy=self.browser_proxy,
+            handle_sigint=False,
+        )
+
+    def launch_browser(self, timeout=60, proxy: Optional[ProxySettings] = None):
+        primary_profile = self.get_primary_profile_directory()
+        self.streaming = False
+        self.browser_proxy = proxy
+        self.play = sync_playwright().start()
         try:
-            self.browser = playbrowser.launch_persistent_context(
-                user_data_dir=primary_profile,
-                headless=headless,
-                proxy=proxy,
-            )
+            self.launch_browser_context(primary_profile)
         except Exception:
             self.user_data_dir = f"{primary_profile}-{str(uuid.uuid4())}"
             message = f"Unable to launch browser from primary profile, trying alternate profile {self.user_data_dir}"
             print(message)
             self.log.warning(message)
             shutil.copytree(primary_profile, self.user_data_dir, ignore=shutil.ignore_patterns("lock"))
-            self.browser = playbrowser.launch_persistent_context(
-                user_data_dir=self.user_data_dir,
-                headless=headless,
-                proxy=proxy,
-            )
+            self.launch_browser_context(self.user_data_dir)
         atexit.register(self._shutdown)
 
         if len(self.browser.pages) > 0:
@@ -343,7 +404,7 @@ class ChatGPT(Backend):
             else:
                 return self._handle_error(json, response, f"Failed to get conversation {uuid}")
 
-    def ask_stream(self, prompt, title=None, model_customizations={}):
+    def _ask_stream(self, prompt, title=None, model_customizations={}):
         if self.session is None:
             self.refresh_session()
 
@@ -495,6 +556,7 @@ class ChatGPT(Backend):
 
     def interrupt_stream(self):
         self.log.info("Interrupting stream")
+        util.print_status_message(False, "\n\nWARNING:\nStream interruption on the browser backend is not currently working properly, and may require force closing the process.\nIf you'd like to help fix this error, see https://github.com/mmabrouk/chatgpt-wrapper/issues/274")
         code = (
             """
             const interrupt_div = document.createElement('DIV');
@@ -514,11 +576,30 @@ class ChatGPT(Backend):
         Returns:
             str: The response received from OpenAI.
         """
-        response = list([i for i in self.ask_stream(message, title=title)])
-        if len(response) == 0:
-            return False, response, "Unusable response produced, maybe login session expired. Try 'pkill firefox' and 'chatgpt install'"
-        else:
-            return True, ''.join(response), "Response received"
+        llm = self.make_llm()
+        try:
+            response = llm(message)
+        except ValueError as e:
+            return False, message, e
+        return True, response.content, "Response received"
+
+    def ask_stream(self, message, title=None, model_customizations={}):
+        """
+        Send a message to chatGPT and stream the response.
+
+        Args:
+            message (str): The message to send.
+
+        Returns:
+            str: The response received from OpenAI.
+        """
+        args = self.streaming_args()
+        llm = self.make_llm(args)
+        try:
+            response = llm(message)
+        except ValueError as e:
+            return False, message, e
+        return True, response.content, "Response received"
 
     def new_conversation(self):
         super().new_conversation()

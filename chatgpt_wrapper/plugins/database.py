@@ -7,6 +7,11 @@ import chatgpt_wrapper.core.util as util
 
 class Database(Plugin):
 
+    def incompatible_backends(self):
+        return [
+            'chatgpt-browser',
+        ]
+
     def default_config(self):
         return {
             'database': {
@@ -21,8 +26,7 @@ class Database(Plugin):
         self.log.info(f"Setting up database plugin, running with backend: {self.backend.name}")
         self.default_database = self.config.get('plugins.database.database.default') or self.config.get('database')
         self.agent_verbose = self.config.get('plugins.database.agent.verbose')
-        self.connection_string = None
-        self.database = None
+        self.disconnect()
 
     def get_shell_completions(self, _base_shell_completions):
         commands = {}
