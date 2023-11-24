@@ -9,73 +9,108 @@
 ##########################################################
 # Backend settings.
 ##########################################################
-# The backend the shell should use, one of: chatgpt-browser, chatgpt-api
-backend: chatgpt-api
+# The backend the shell should use. For now, this should always be: api
+backend: api
+# Additional options to pass to the backend.
+backend_options:
+  # If set to a string, and no users currently exist in the database,
+  # a user will be created with this name and no password or email.
+  auto_create_first_user: None
+  # Load this user when bootstrapping the backend. Can be user_id or username.
+  default_user: None
+  # Load this conversation when bootstrapping the backend. Must be an existing conversation id.
+  default_conversation_id: None
+
 # The database connection string, in a format SQLAlchemy understands.
 # DO NOT USE THE LINE AS IT IS WRITTEN BELOW, IT ONLY ILLUSTRATES THE DEFAULT LOCATION.
-# database: sqlite:////home/[username]/.local/share/chatgpt-wrapper/profiles/default/storage.db
+# database: sqlite:////home/[username]/.local/share/llm-workflow-engine/profiles/default/storage.db
+
+
+
+##########################################################
+# Directory settings.
+##########################################################
+# Customize user directory locations.
+#
+# Directories are scanned by their order in the list. System directories for these
+# settings are automatically included and are searched with the lowest priority.
+#
+# For presets and workflows, later files with the same name override earlier ones.
+# For plugins and templates, first found wins.
+#
+# The following token are available:
+# - $HOME: The user's home directory
+# - $CONFIG_DIR: The configuration directory
+# - $PROFILE: The active profile
+directories:
+  templates:
+    # New templates created in the CLI are saved to the first directory in the list.
+    - $CONFIG_DIR/profiles/$PROFILE/templates
+    - $CONFIG_DIR/templates
+  presets:
+    - $CONFIG_DIR/presets
+    # New presets created in the CLI are saved to the last directory in the list.
+    - $CONFIG_DIR/profiles/$PROFILE/presets
+  plugins:
+    - $CONFIG_DIR/profiles/$PROFILE/plugins
+    - $CONFIG_DIR/plugins
+  workflows:
+    - $CONFIG_DIR/workflows
+    # New workflows created in the CLI are saved to the last directory in the list.
+    - $CONFIG_DIR/profiles/$PROFILE/workflows
 
 
 ##########################################################
 # Shell settings.
 ##########################################################
 shell:
-  # NOTE: This setting is only available on the following backends: chatgpt-api
   # Customize the prompt prefix, the following token are available:
+  # - $SYSTEM_MESSAGE_ALIAS: The current your system message alias
   # - $USER: Logged in username
   # - $MODEL: The LLM model name
+  # - $PRESET_OR_MODEL: The active preset if set, or the LLM model name
   # - $NEWLINE: Insert a newline
   # - $TEMPERATURE: The current temperature
-  # - $TOP_P: The current top_p
-  # - $PRESENCE_PENALTY: The current presence penalty
-  # - $FREQUENCY_PENALTY: The current frequency penalty
   # - $MAX_SUBMISSION_TOKENS: The maximum number of tokens in a submission
-  # - $CURRENT_CONVERSATION_TOKENS: The token count of the current conversation
-  prompt_prefix: ($TEMPERATURE/$TOP_P/$PRESENCE_PENALTY/$FREQUENCY_PENALTY/$MAX_SUBMISSION_TOKENS/$CURRENT_CONVERSATION_TOKENS)$NEWLINE$USER@$MODEL
+  # - $CURRENT_CONVERSATION_TOKENS: The token count of the current conversation (only supported for chat models)
+  prompt_prefix: '($TEMPERATURE/$MAX_SUBMISSION_TOKENS/$CURRENT_CONVERSATION_TOKENS): $SYSTEM_MESSAGE_ALIAS$NEWLINE$USER@$PRESET_OR_MODEL'
   # Full path to the file that stores a history of commands in the shell.
   # Set to false to disable storing history.
   history_file: /tmp/repl_history.log
 
+
 ##########################################################
-# Browser settings.
+# Model settings.
 ##########################################################
-browser:
-  # Enable debug mode (shows browser window if true, headless if false)
-  debug: false
-  # The browser to use, one of: firefox, chromium, webkit
-  provider: firefox
+model:
+  # The preset to use on startup.
+  # See '/help presets' for more information.
+  default_preset: null
+  # The alias name of the system message to use on startup.
+  # Can be 'default' for the default system message, or another
+  # alias name defined in the 'system_message' section.
+  default_system_message: default
+  # If true, responses will be streamed in real time (no markdown formatting).
+  # By default, streaming is enabled in the REPL for supported providers, and
+  # disabled otherwise.
+  streaming: true
+  # Configure aliases to switch between system messages, key is alias, value is message.
+  # NOTE: This setting is only active for chat models.
+  # See '/help system_message' for more information.
+  system_message:
+    programmer: "You are an expert programmer, who responds to questions with brief examples in code."
 
 
 ##########################################################
 # Chat settings.
 ##########################################################
 chat:
-  # The model to use when communicating with the server.
-  # NOTE: This setting is only valid on the following backends: chatgpt-browser
-  # For other backends, the default model is configured per-user.
-  model: default
-  # When using the OpenAI API backend, the defaults for these values can be
-  # customized. See
-  # https://platform.openai.com/docs/api-reference/chat for more information.
-  model_customizations:
-    temperature: .9
-    top_p: 1
-    presence_penalty: .6
-    frequency_penalty: 0
-    # See '/help model_max_submission_tokens' for more information.
-    max_submission_tokens: 4000
-    # Configure aliases to switch between system messages, key is alias, value is message.
-    # See '/help model_system_message' for more information.
-    system_message:
-      programmer: "You are an expert programmer, who responds to questions with brief examples in code."
-  # If true, responses will be streamed in real time (no markdown formatting).
-  streaming: true
   # Chat logs.
   log:
     # Enable logging to a file.
     enabled: false
     # Full path to the log file.
-    filepath: chatgpt.log
+    filepath: lwe.log
 
 
 ##########################################################
@@ -98,11 +133,17 @@ plugins:
   enabled:
     # Core plugins, see README for more details.
     - echo
+    - examples
     #- awesome
     #- database
     #- data_query
     #- shell
     #- zap
+    # Core provider plugins, see README for more details.
+    #- provider_ai21
+    #- provider_cohere
+    #- provider_huggingface_hub
+    #- provider_openai
 
 ##########################################################
 # Debug settings.
@@ -113,7 +154,7 @@ debug:
     # Enable to log debug messages.
     enabled: false
     # Full path to the log file.
-    filepath: /tmp/chatgpt-debug.log
+    filepath: /tmp/lwe-debug.log
     # Message format.
     format: '%(name)s - %(asctime)s - %(levelname)s - %(message)s'
     # Message level (must be valid Python logging module level).

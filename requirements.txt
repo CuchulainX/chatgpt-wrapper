@@ -1,16 +1,22 @@
+ansible>=8.0
+ansible-core>=2.15
+alembic
+beautifulsoup4
+docutils>=0.20.1
 email-validator
-Flask
 Jinja2
-langchain>=0.0.123
+langchain==0.0.336
 names
-openai>=0.27.2
+numexpr>=2.8.4
+openai>=1.3.0
 openpyxl
-playwright
+pdfminer.six
 prompt-toolkit
 pydantic-computed
 pyperclip
 python-frontmatter
 PyYAML
 rich
-sqlalchemy
+textract @ git+https://github.com/thehunmonkgroup/textract@41c8a14de9facbfe21a1881cda49ced67b3bb5a4
+sqlalchemy>=1.4.48
 tiktoken
