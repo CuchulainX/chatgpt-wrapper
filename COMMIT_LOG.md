@@ -1,3 +1,30 @@
+### v0.18.7 - 08/01/2024
+
+* **Mon Jan 08 2024:** fix edge cases around setting provider/model
+* **Mon Jan 08 2024:** fix conditional logic
+* **Mon Jan 08 2024:** check validate_models when verifying tokenizer
+* **Mon Jan 08 2024:** fix docker compose command in docs
+* **Mon Jan 08 2024:** move to langchain_openai partner package
+
+### v0.18.6 - 08/01/2024
+
+* **Mon Jan 08 2024:** loosen up openai/langchain requirements
+* **Mon Jan 08 2024:** fix test warnings
+* **Mon Jan 08 2024:** bump langchain/openai deps
+* **Sat Dec 23 2023:** add link for Github Gist plugin
+* **Tue Dec 19 2023:** add plugin link to provider_chat_google_genai
+* **Tue Dec 19 2023:** doc: add chat anthropic and chat mistralai plugin links
+* **Tue Dec 19 2023:** fix doc build error
+* **Sun Dec 17 2023:** remove dead pydantic-computed dep
+
+### v0.18.5 - 15/12/2023
+
+* **Fri Dec 15 2023:** bump langchain to 0.0.350
+* **Sun Nov 26 2023:** allow provider-specific token calculation
+* **Sat Nov 18 2023:** add Ollama plugin to doc
+* **Fri Nov 17 2023:** add chat-anyscale and chat-cohere plugin links
+* **Fri Nov 17 2023:** fix #332: force backend setting, throw user warning on legacy settings
+
 ### v0.18.4 - 16/11/2023
 
 * **Thu Nov 16 2023:** exclude example dirs that start w/ an underscore

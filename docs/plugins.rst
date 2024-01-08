@@ -78,6 +78,8 @@ These plugins add additional commands to the shell:
    https://github.com/llm-workflow-engine/lwe-plugin-database
 * **data_query:** Send natural language commands to a loaded file of structured data
    https://github.com/llm-workflow-engine/lwe-plugin-data-query
+* **gist:** Post a conversation to https://gist.github.com
+   https://github.com/llm-workflow-engine/lwe-plugin-gist
 * **pastebin:** Post a conversation to https://pastebin.com
    https://github.com/llm-workflow-engine/lwe-plugin-pastebin
 * **shell:** Transform natural language into a shell command, and optionally execute it **WARNING: POTENTIALLY DANGEROUS -- YOU ARE RESPONSIBLE FOR VALIDATING THE COMMAND RETURNED BY THE LLM, AND THE OUTCOME OF ITS EXECUTION.**
@@ -107,10 +109,16 @@ Supported providers
    https://github.com/llm-workflow-engine/lwe-plugin-provider-ai21
 * **provider_azure_openai_chat:** Access to `Azure OpenAI <https://learn.microsoft.com/en-us/azure/ai-services/openai/concepts/models>`_ chat models
    https://github.com/llm-workflow-engine/lwe-plugin-provider-azure-openai-chat
+* **provider_chat_anthropic:** Access to `Anthropic <https://docs.anthropic.com/claude/reference/selecting-a-model>`_ chat models
+   https://github.com/llm-workflow-engine/lwe-plugin-provider-chat-anthropic
 * **provider_chat_anyscale:** Access to `Anyscale <https://docs.anyscale.com>`_ chat models
    https://github.com/llm-workflow-engine/lwe-plugin-provider-chat-anyscale
 * **provider_chat_cohere:** Access to `Cohere <https://docs.cohere.com/docs/models>`_ chat models
    https://github.com/llm-workflow-engine/lwe-plugin-provider-chat-cohere
+* **provider_chat_google_genai:** Access to `Google GenAI <https://ai.google.dev/models>`_ chat models.
+   https://github.com/llm-workflow-engine/lwe-plugin-provider-chat-google-genai
+* **provider_chat_mistralai:** Access to `MistralAI <https://docs.mistral.ai>`_ chat models
+   https://github.com/llm-workflow-engine/lwe-plugin-provider-chat-mistralai
 * **provider_chat_ollama:** Access to `Ollama <https://ollama.ai/library>`_ chat models
    https://github.com/llm-workflow-engine/lwe-plugin-provider-chat-ollama
 * **provider_chat_vertexai:** Access to `Google Vertex AI <https://cloud.google.com/vertex-ai/docs/generative-ai/learn/models>`_ chat models.

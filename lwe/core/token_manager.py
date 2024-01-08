@@ -27,7 +27,8 @@ class TokenManager:
         :returns: Encoding object
         :rtype: Encoding
         """
-        if self.model_name not in self.provider.available_models:
+        validate_models = self.provider.get_capability("validate_models", True)
+        if validate_models and self.model_name not in self.provider.available_models:
             raise NotImplementedError(f"Unsupported model: {self.model_name}")
         try:
             encoding = tiktoken.encoding_for_model(self.model_name)
@@ -42,6 +43,25 @@ class TokenManager:
     def get_num_tokens_from_messages(self, messages, encoding=None):
         """
         Get number of tokens for a list of messages.
+
+        If a provider does not have a get num_tokens_from_messages() method,
+        default_get_num_tokens_from_messages() will be used.
+
+        :param messages: List of messages
+        :type messages: list
+        :param encoding: Encoding to use, defaults to None to auto-detect
+        :type encoding: Encoding, optional
+        :returns: Number of tokens
+        :rtype: int
+        """
+        token_counter = getattr(self.provider, "get_num_tokens_from_messages", None)
+        return token_counter(messages, encoding) if token_counter else self.default_get_num_tokens_from_messages(messages, encoding)
+
+    def default_get_num_tokens_from_messages(self, messages, encoding=None):
+        """
+        Get number of tokens for a list of messages.
+
+        The default implementation uses tiktoken, which is the OpenAI implementation.
 
         :param messages: List of messages
         :type messages: list
